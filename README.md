@@ -162,11 +162,6 @@ studypal/
 
 ---
 
-## 📸 Screenshots
-
-> Coming soon
-
----
 
 ## 📝 License
 
