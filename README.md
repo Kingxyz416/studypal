@@ -157,7 +157,7 @@ studypal/
 │
 ├── start.bat            # One-click launcher (Windows)
 ├── stop.bat             # Stops all services
-└── README.md
+
 ```
 
 ---
@@ -175,5 +175,5 @@ MIT — feel free to use, modify, and build on this.
 ---
 
 <div align="center">
-  Built with 🖤 and a grumpy cat as the icon
+  Built with 🖤 in the honor of my late cat COCO you sure will be missed i dedicate this project to you buddy fligh high 
 </div>
