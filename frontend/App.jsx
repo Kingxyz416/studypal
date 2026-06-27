@@ -29,6 +29,8 @@ function StarCanvas() {
     const stars = Array.from({length:120}, () => ({
       x: Math.random()*c.width, y: Math.random()*c.height,
       r: Math.random()*1+0.2, o: Math.random()*0.5+0.1,
+      phase: Math.random() * Math.PI * 2,
+      speed: 0.015 + Math.random()*0.025
     }))
 
     let shoots = []
@@ -44,7 +46,7 @@ function StarCanvas() {
         angle: Math.PI/5 + (Math.random()-0.5)*0.3,
         alpha: 1,
       })
-      nextShoot = Date.now() + 8000 + Math.random()*4000
+      nextShoot = Date.now() + 5000
     }
 
     const draw = () => {
@@ -52,11 +54,12 @@ function StarCanvas() {
 
       // stars
       stars.forEach(s => {
-        s.o += (Math.random()-0.5)*0.02
-        s.o = Math.max(0.05, Math.min(0.6, s.o))
+        s.phase += s.speed
+        const op = s.o + Math.sin(s.phase)*0.25
+        const finalOp = Math.max(0.05, Math.min(0.8, op))
         ctx.beginPath()
         ctx.arc(s.x, s.y, s.r, 0, Math.PI*2)
-        ctx.fillStyle = `rgba(200,215,255,${s.o})`
+        ctx.fillStyle = `rgba(200,215,255,${finalOp})`
         ctx.fill()
       })
 
@@ -326,15 +329,7 @@ export default function App() {
                     {msg.role==='ai' ? (
                       <>
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content || ' '}</ReactMarkdown>
-                        {msg.sources?.length > 0 && !msg.streaming && (
-                          <div className="sources-bar">
-                            {msg.sources.map((s,si) => (
-                              <span key={si} className="source-chip">
-                                {s.file} · p{s.page} · {Math.round(s.relevance*100)}%
-                              </span>
-                            ))}
-                          </div>
-                        )}
+
                       </>
                     ) : msg.content}
                   </div>
@@ -358,7 +353,7 @@ export default function App() {
               value={input}
               onChange={e=>setInput(e.target.value)}
               onKeyDown={onKey}
-              placeholder="Ask anything about your notes… (Enter to send)"
+              placeholder="Ask anything about your notes…"
               disabled={streaming}
               rows={1}
             />

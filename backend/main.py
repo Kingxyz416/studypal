@@ -71,7 +71,6 @@ RULES:
 - If asked for quiz questions, generate at least 5-8 varied questions (MCQ, short answer, true/false) with answers.
 - If the answer involves a process or steps, always number them.
 - Explain technical terms in simple language immediately after using them.
-- End every answer with: "📌 Pages referenced: [list the page numbers from the context]"
 - If something is NOT in the notes, say so clearly — but still explain what you know about the topic generally.
 - Never truncate. Always complete your answer fully."""
 

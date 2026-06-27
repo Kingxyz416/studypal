@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap');
 /* ═══════════════════════════════════════════
    ragsysrem — Global Styles
    Clean, minimal, dark
@@ -12,7 +13,7 @@
   --border-md: rgba(255,255,255,0.11);
   --text:      #e2e8f0;
   --text-2:    #94a3b8;
-  --text-3:    #475569;
+  --text-3:    #64748b;
   --accent:    #a78bfa;
   --accent-d:  rgba(167,139,250,0.15);
   --green:     #22c55e;
@@ -29,7 +30,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); -web
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
 
 /* ── Layout ── */
-.app { display: grid; grid-template-columns: 220px 1fr 220px; grid-template-rows: 44px 1fr; height: 100vh; }
+.app { display: grid; grid-template-columns: 220px 1fr 260px; grid-template-rows: 44px 1fr; height: 100vh; }
 
 /* ── Topbar ── */
 .topbar {
@@ -126,7 +127,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); -web
 }
 .chat-empty {
   flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
-  gap:10px; opacity:0.35; text-align:center; pointer-events:none;
+  gap:10px; opacity:0.75; text-align:center; pointer-events:none;
 }
 .chat-empty-title { font-size:13px; font-weight:500; color:var(--text-2); }
 .chat-empty-sub { font-size:11px; color:var(--text-3); max-width:240px; line-height:1.6; }
@@ -250,7 +251,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); -web
 .sticky-del { position:absolute; top:5px; right:6px; background:none; border:none; font-size:11px; color:rgba(0,0,0,0.25); cursor:pointer; opacity:0; transition:opacity 0.15s; padding:2px; }
 .sticky-card:hover .sticky-del { opacity:1; }
 .sticky-del:hover { color:rgba(0,0,0,0.6); }
-.sticky-ta { width:100%; min-height:70px; background:none; border:none; outline:none; resize:none; font-family:var(--font-mono); font-size:11px; line-height:1.6; color:#1e1e2e; }
+.sticky-ta { width:100%; min-height:70px; background:none; border:none; outline:none; resize:none; font-family:'Patrick Hand', cursive; font-size:11px; line-height:1.6; color:#1e1e2e; }
 .sticky-ta::placeholder { color:rgba(30,30,46,0.35); }
 .sticky-empty { padding:24px 12px; text-align:center; color:var(--text-3); font-size:11px; opacity:0.5; }
 
