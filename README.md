@@ -23,7 +23,6 @@
 - 🌊 **Streaming responses** — answers appear word by word in real time
 - 📌 **Sticky notes board** — pin colour-coded notes directly on the interface
 - 🕐 **Chat history** — every question you've asked is saved in the sidebar
-- 🌠 **Shooting star background** — because studying should feel cool
 - 🔒 **100% local & offline** — your data never leaves your machine
 
 ---
