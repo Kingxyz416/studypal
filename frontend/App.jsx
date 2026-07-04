@@ -101,14 +101,13 @@ function StarCanvas() {
 
 // ── Main App ──
 export default function App() {
-  // Chat state
-  const [messages, setMessages]   = useState([])
+  // Multi-Chat States
+  const [chats, setChats]         = useState([])
+  const [activeChatId, setActiveChatId] = useState(null)
   const [input, setInput]         = useState('')
   const [streaming, setStreaming] = useState(false)
-  const [history, setHistory]     = useState([])
 
   // Upload state
-  const [files, setFiles]         = useState([])
   const [dragOver, setDragOver]   = useState(false)
   const [uploading, setUploading] = useState(false)
 
@@ -116,17 +115,23 @@ export default function App() {
   const [notes, setNotes]         = useState([])
   const [selColor, setSelColor]   = useState('yellow')
 
-  // Stats
-  const [stats, setStats]         = useState({ total_chunks:0, sources:[] })
+  // Chat title rename states
+  const [editingTitle, setEditingTitle] = useState(false)
+  const [tempTitle, setTempTitle] = useState('')
 
   const bottomRef  = useRef()
   const taRef      = useRef()
   const fileInputRef = useRef()
 
-  // Load stickies + stats on mount
+  // Derive active chat properties
+  const activeChat = chats.find(c => c.id === activeChatId) || null
+  const messages   = activeChat ? activeChat.messages : []
+  const files      = activeChat ? activeChat.files || [] : []
+
+  // Load stickies + chats on mount
   useEffect(() => {
+    fetchChats()
     fetch('/api/stickies').then(r=>r.json()).then(setNotes).catch(()=>{})
-    fetch('/api/stats').then(r=>r.json()).then(setStats).catch(()=>{})
   }, [])
 
   // Auto scroll
@@ -139,25 +144,118 @@ export default function App() {
     ta.style.height = Math.min(ta.scrollHeight, 100) + 'px'
   }, [input])
 
+  const fetchChats = async () => {
+    try {
+      const res = await fetch('/api/chats')
+      const data = await res.json()
+      setChats(data)
+      if (data.length > 0 && !activeChatId) {
+        setActiveChatId(data[0].id)
+      }
+    } catch {}
+  }
+
+  const createChat = async () => {
+    const defaultTitle = `Chat ${chats.length + 1}`
+    const title = window.prompt("Enter a name for your new chat:", defaultTitle)
+    if (title === null) return // User clicked Cancel
+    const finalTitle = title.trim() || defaultTitle
+
+    try {
+      const res = await fetch('/api/chats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: finalTitle })
+      })
+      const newChat = await res.json()
+      setChats(prev => [...prev, newChat])
+      setActiveChatId(newChat.id)
+      setEditingTitle(false)
+    } catch {}
+  }
+
+  const deleteChat = async (id, e) => {
+    e.stopPropagation()
+    try {
+      await fetch(`/api/chats/${id}`, { method: 'DELETE' })
+      setChats(prev => {
+        const nextChats = prev.filter(c => c.id !== id)
+        if (activeChatId === id) {
+          setActiveChatId(nextChats.length > 0 ? nextChats[0].id : null)
+        }
+        return nextChats
+      })
+    } catch {}
+  }
+
+  const deleteFile = async (filename, e) => {
+    e.stopPropagation()
+    if (!activeChatId) return
+    try {
+      await fetch(`/api/chats/${activeChatId}/files?filename=${encodeURIComponent(filename)}`, {
+        method: 'DELETE'
+      })
+      fetchChats()
+    } catch {}
+  }
+
+  const startRename = () => {
+    if (!activeChat) return
+    setTempTitle(activeChat.title)
+    setEditingTitle(true)
+  }
+
+  const saveRename = async () => {
+    if (!tempTitle.trim() || !activeChatId) {
+      setEditingTitle(false)
+      return
+    }
+    try {
+      const res = await fetch(`/api/chats/${activeChatId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: tempTitle.trim() })
+      })
+      const updated = await res.json()
+      setChats(prev => prev.map(c => c.id === activeChatId ? updated : c))
+      setEditingTitle(false)
+    } catch {}
+  }
+
+  const handleRenameKey = (e) => {
+    if (e.key === 'Enter') saveRename()
+    if (e.key === 'Escape') setEditingTitle(false)
+  }
+
   // ── Send message ──
   const sendMessage = async (q) => {
     const question = (q || input).trim()
-    if (!question || streaming) return
+    if (!question || streaming || !activeChatId) return
     setInput('')
     setStreaming(true)
 
-    // Add to history
-    setHistory(prev => [{q: question, time: 'just now'}, ...prev.slice(0,19)])
-    setMessages(prev => [...prev, {role:'user', content:question}])
-
     const aiId = Date.now()
-    setMessages(prev => [...prev, {id:aiId, role:'ai', content:'', sources:[], streaming:true}])
+
+    // Add user & placeholder AI message locally
+    setChats(prev => prev.map(c => {
+      if (c.id === activeChatId) {
+        return {
+          ...c,
+          messages: [
+            ...c.messages,
+            { role: 'user', content: question },
+            { id: aiId, role: 'ai', content: '', sources: [], streaming: true }
+          ]
+        }
+      }
+      return c
+    }))
 
     try {
       const res = await fetch('/api/chat', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({question, n_context:6})
+        body: JSON.stringify({question, chat_id: activeChatId, n_context:6})
       })
       const reader = res.body.getReader()
       const decoder = new TextDecoder()
@@ -175,19 +273,51 @@ export default function App() {
           try {
             const p = JSON.parse(data)
             if (p.sources) {
-              setMessages(prev => prev.map(m => m.id===aiId ? {...m, sources:p.sources} : m))
+              setChats(prev => prev.map(c => {
+                if (c.id === activeChatId) {
+                  return {
+                    ...c,
+                    messages: c.messages.map(m => m.id===aiId ? {...m, sources:p.sources} : m)
+                  }
+                }
+                return c
+              }))
             } else if (p.token) {
-              setMessages(prev => prev.map(m => m.id===aiId ? {...m, content:m.content+p.token} : m))
+              setChats(prev => prev.map(c => {
+                if (c.id === activeChatId) {
+                  return {
+                    ...c,
+                    messages: c.messages.map(m => m.id===aiId ? {...m, content:m.content+p.token} : m)
+                  }
+                }
+                return c
+              }))
             }
           } catch {}
         }
       }
     } catch(e) {
-      setMessages(prev => prev.map(m => m.id===aiId ? {...m, content:'Error: '+e.message} : m))
+      setChats(prev => prev.map(c => {
+        if (c.id === activeChatId) {
+          return {
+            ...c,
+            messages: c.messages.map(m => m.id===aiId ? {...m, content:'Error: '+e.message} : m)
+          }
+        }
+        return c
+      }))
     } finally {
-      setMessages(prev => prev.map(m => m.id ? {...m, streaming:false} : m))
+      setChats(prev => prev.map(c => {
+        if (c.id === activeChatId) {
+          return {
+            ...c,
+            messages: c.messages.map(m => m.id===aiId ? {...m, streaming:false} : m)
+          }
+        }
+        return c
+      }))
       setStreaming(false)
-      fetch('/api/stats').then(r=>r.json()).then(setStats).catch(()=>{})
+      fetchChats()
     }
   }
 
@@ -197,24 +327,54 @@ export default function App() {
 
   // ── Upload ──
   const uploadFile = async (file) => {
-    if (!file.name.endsWith('.pdf')) return
-    setFiles(prev => [...prev, {name:file.name, status:'loading', chunks:0, pages:0}])
+    if (!file.name.endsWith('.pdf') || !activeChatId) return
+    
+    // Add placeholder file chip to active chat
+    setChats(prev => prev.map(c => {
+      if (c.id === activeChatId) {
+        return {
+          ...c,
+          files: [...(c.files || []), {name:file.name, status:'loading', chunks:0, pages:0}]
+        }
+      }
+      return c
+    }))
     setUploading(true)
+    
     try {
       const fd = new FormData(); fd.append('file', file)
-      const res = await fetch('/api/upload', {method:'POST', body:fd})
+      const res = await fetch(`/api/upload?chat_id=${activeChatId}`, {method:'POST', body:fd})
       const data = await res.json()
       if (res.ok) {
-        setFiles(prev => prev.map(f => f.name===file.name
-          ? {...f, status:'ok', chunks:data.chunks_created, pages:data.pages_extracted} : f))
-        fetch('/api/stats').then(r=>r.json()).then(setStats).catch(()=>{})
+        setChats(prev => prev.map(c => {
+          if (c.id === activeChatId) {
+            return {
+              ...c,
+              files: (c.files || []).map(f => f.name===file.name
+                ? {...f, status:'ok', chunks:data.chunks_created, pages:data.pages_extracted} : f)
+            }
+          }
+          return c
+        }))
       }
     } catch {}
-    finally { setUploading(false) }
+    finally {
+      setUploading(false)
+      fetchChats()
+    }
   }
 
   const onDrop = (e) => { e.preventDefault(); setDragOver(false); Array.from(e.dataTransfer.files).forEach(uploadFile) }
   const onFileInput = (e) => { Array.from(e.target.files).forEach(uploadFile); e.target.value='' }
+
+  // ── Clear Chat History ──
+  const handleClearChat = async () => {
+    if (!activeChatId) return
+    try {
+      await fetch(`/api/clear?chat_id=${activeChatId}`, { method:'DELETE' })
+      fetchChats()
+    } catch {}
+  }
 
   // ── Sticky notes ──
   const addNote = async () => {
@@ -249,56 +409,110 @@ export default function App() {
             <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
             <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
           </svg>
-          studypal
+          <span>studypal</span>
+
+          {activeChat && (
+            <>
+              <div className="topbar-separator" />
+              <div className="chat-title-container">
+                {editingTitle ? (
+                  <input
+                    type="text"
+                    className="chat-title-input"
+                    value={tempTitle}
+                    onChange={e => setTempTitle(e.target.value)}
+                    onBlur={saveRename}
+                    onKeyDown={handleRenameKey}
+                    autoFocus
+                  />
+                ) : (
+                  <div className="chat-title-display" onClick={startRename} title="Click to rename chat">
+                    {activeChat.title}
+                    <span className="chat-title-edit-icon">✏️</span>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
         <div className="topbar-right">
           <div className="status-dot" />
-          llama3.2 · {stats.total_chunks} chunks
+          llama3.2 · {files.reduce((sum, f) => sum + (f.chunks || 0), 0)} chunks
         </div>
       </header>
 
       {/* Left panel */}
       <aside className="left-panel">
-        {/* Upload */}
-        <div className="upload-section">
-          <div className="panel-label">Upload</div>
+        {/* Chats list (replacing old history) */}
+        <div className="history-section">
+          <div className="panel-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>Chats</span>
+            <button className="add-chat-btn" onClick={createChat}>+ New</button>
+          </div>
+          {chats.length === 0 ? (
+            <div style={{fontSize:11,color:'var(--text-3)',opacity:0.5,padding:'8px 0'}}>
+              No chats yet. Create one!
+            </div>
+          ) : (
+            chats.map(c => (
+              <div
+                key={c.id}
+                className={`hist-item ${c.id === activeChatId ? 'active-chat' : ''}`}
+                onClick={() => {
+                  setActiveChatId(c.id)
+                  setEditingTitle(false)
+                }}
+              >
+                <div className="hist-q" style={{ flex: 1 }}>{c.title}</div>
+                <button
+                  className="chat-delete-btn"
+                  onClick={(e) => deleteChat(c.id, e)}
+                  title="Delete Chat"
+                >
+                  ✕
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Upload (scoped to active chat) */}
+        <div className="upload-section" style={{ borderTop: '1px solid var(--border)' }}>
+          <div className="panel-label">Upload PDFs</div>
           <div
-            className={`upload-zone ${dragOver ? 'drag' : ''}`}
-            onDragOver={e=>{e.preventDefault();setDragOver(true)}}
+            className={`upload-zone ${dragOver ? 'drag' : ''} ${!activeChatId ? 'disabled' : ''}`}
+            onDragOver={e=>{e.preventDefault(); if (activeChatId) setDragOver(true)}}
             onDragLeave={()=>setDragOver(false)}
             onDrop={onDrop}
+            style={{ opacity: activeChatId ? 1 : 0.4, pointerEvents: activeChatId ? 'auto' : 'none' }}
           >
-            <input ref={fileInputRef} type="file" accept=".pdf" multiple onChange={onFileInput} />
+            <input ref={fileInputRef} type="file" accept=".pdf" multiple onChange={onFileInput} disabled={!activeChatId} />
             <div className="upload-icon">📄</div>
             <div className="upload-text">
-              {uploading ? 'Processing…' : <><b>Click or drag</b> PDFs here</>}
+              {uploading ? 'Processing…' : activeChatId ? <><b>Click or drag</b> PDFs here</> : <>Create a chat first</>}
             </div>
           </div>
           {files.length > 0 && (
             <div className="file-list">
               {files.map((f,i) => (
-                <div key={i} className="file-chip">
-                  <div className={`chip-dot ${f.status}`} />
-                  <span className="file-chip-name">{f.name}</span>
-                  {f.status==='ok' && <span className="file-chip-meta">{f.pages}p</span>}
+                <div key={i} className="file-chip" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '7px', flex: 1, minWidth: 0 }}>
+                    <div className={`chip-dot ${f.status || 'ok'}`} />
+                    <span className="file-chip-name" title={f.name}>{f.name}</span>
+                    {f.status==='ok' && f.pages > 0 && <span className="file-chip-meta">{f.pages}p</span>}
+                  </div>
+                  <button
+                    className="chat-delete-btn"
+                    onClick={(e) => deleteFile(f.name, e)}
+                    title="Delete PDF"
+                    style={{ marginLeft: '4px' }}
+                  >
+                    ✕
+                  </button>
                 </div>
               ))}
             </div>
           )}
-        </div>
-
-        {/* History */}
-        <div className="history-section">
-          <div className="panel-label">History</div>
-          {history.length === 0
-            ? <div style={{fontSize:11,color:'var(--text-3)',opacity:0.5}}>No chats yet</div>
-            : history.map((h,i) => (
-              <div key={i} className="hist-item" onClick={()=>sendMessage(h.q)}>
-                <div className="hist-q">{h.q}</div>
-                <div className="hist-time">{h.time}</div>
-              </div>
-            ))
-          }
         </div>
       </aside>
 
@@ -307,11 +521,17 @@ export default function App() {
         <StarCanvas />
 
         <div className="chat-messages">
-          {messages.length === 0 ? (
+          {!activeChatId ? (
+            <div className="chat-empty">
+              <div style={{fontSize:32,marginBottom:8}}>✦</div>
+              <div className="chat-empty-title">Select or Create a Chat</div>
+              <div className="chat-empty-sub">Create a chat thread on the left to begin uploading files and starting study sessions.</div>
+            </div>
+          ) : messages.length === 0 ? (
             <div className="chat-empty">
               <div style={{fontSize:32,marginBottom:8}}>✦</div>
               <div className="chat-empty-title">Ask your notes anything</div>
-              <div className="chat-empty-sub">Upload a PDF, then ask questions, get summaries, or generate quizzes.</div>
+              <div className="chat-empty-sub">Upload one or more PDFs to this chat, then ask questions, get summaries, or generate quizzes.</div>
               <div className="suggestions">
                 {SUGGESTIONS.map((s,i) => (
                   <button key={i} className="suggestion-pill" onClick={()=>sendMessage(s)}>{s}</button>
@@ -329,7 +549,15 @@ export default function App() {
                     {msg.role==='ai' ? (
                       <>
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content || ' '}</ReactMarkdown>
-
+                        {msg.sources && msg.sources.length > 0 && (
+                          <div className="sources-bar">
+                            {msg.sources.map((s, idx) => (
+                              <div key={idx} className="source-chip" title={`Relevance: ${s.relevance || 'N/A'}`}>
+                                {s.file} (p. {s.page})
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </>
                     ) : msg.content}
                   </div>
@@ -337,7 +565,7 @@ export default function App() {
               ))}
               {!streaming && (
                 <div style={{textAlign:'center'}}>
-                  <button className="clear-btn" onClick={()=>setMessages([])}>clear chat</button>
+                  <button className="clear-btn" onClick={handleClearChat}>clear chat history</button>
                 </div>
               )}
             </>
@@ -346,18 +574,18 @@ export default function App() {
         </div>
 
         <div className="chat-input-area">
-          <div className="chat-input-row">
+          <div className="chat-input-row" style={{ opacity: activeChatId ? 1 : 0.5 }}>
             <textarea
               ref={taRef}
               className="chat-textarea"
               value={input}
               onChange={e=>setInput(e.target.value)}
               onKeyDown={onKey}
-              placeholder="Ask anything about your notes…"
-              disabled={streaming}
+              placeholder={activeChatId ? "Ask anything about your notes…" : "Select a chat first…"}
+              disabled={streaming || !activeChatId}
               rows={1}
             />
-            <button className="send-btn" onClick={()=>sendMessage()} disabled={!input.trim()||streaming}>
+            <button className="send-btn" onClick={()=>sendMessage()} disabled={!input.trim()||streaming||!activeChatId}>
               ↑
             </button>
           </div>

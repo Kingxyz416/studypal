@@ -1,18 +1,10 @@
 [
   {
-    "id": "83880a10-12a5-4418-9342-491f17956481",
-    "text": "Testing the new Patrick Hand font on this sticky note. It should look like handwriting!",
+    "id": "1eb261a2-ac6f-4a8a-8932-1adb555c823d",
+    "text": "My physics note",
     "color": "yellow",
     "x": 0.0,
     "y": 0.0,
-    "rotation": -1.8476958848915976
-  },
-  {
-    "id": "7d51983d-9314-4c30-ae44-a1523af9b670",
-    "text": "bhai padhlwe",
-    "color": "green",
-    "x": 0.0,
-    "y": 0.0,
-    "rotation": 0.8410875644319176
+    "rotation": 1.7592734104231864
   }
 ]

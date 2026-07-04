@@ -256,3 +256,102 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); -web
 .sticky-empty { padding:24px 12px; text-align:center; color:var(--text-3); font-size:12px; opacity:0.5; }
 .clear-btn { background:none; border:1px solid var(--border); color:var(--text-3); border-radius:999px; padding:3px 12px; font-size:11px; font-family:var(--font-mono); cursor:pointer; transition:all 0.15s; }
 .clear-btn:hover { border-color:var(--border-md); color:var(--text-2); }
+
+/* ── Multi-Chat Sidebar & Renaming Styles ── */
+.hist-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  position: relative;
+  border: 1px solid transparent;
+}
+.hist-item.active-chat {
+  background: var(--accent-d);
+  border-color: var(--border-md);
+}
+.hist-item.active-chat .hist-q {
+  color: var(--text);
+  font-weight: 500;
+}
+.chat-delete-btn {
+  background: none;
+  border: none;
+  color: var(--text-3);
+  cursor: pointer;
+  font-size: 11px;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+  padding: 2px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.hist-item:hover .chat-delete-btn,
+.file-chip:hover .chat-delete-btn {
+  opacity: 1;
+}
+.chat-delete-btn:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+.add-chat-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--accent);
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: var(--r);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.add-chat-btn:hover {
+  border-color: var(--accent);
+  background: var(--accent-d);
+}
+.chat-title-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.chat-title-input {
+  background: var(--bg);
+  border: 1px solid var(--border-md);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: var(--r);
+  outline: none;
+  width: 140px;
+}
+.chat-title-input:focus {
+  border-color: var(--accent);
+}
+.chat-title-display {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px;
+  border-radius: var(--r);
+  transition: background 0.15s, color 0.15s;
+}
+.chat-title-display:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+.chat-title-edit-icon {
+  font-size: 10px;
+  opacity: 0.5;
+}
+.topbar-separator {
+  width: 1px;
+  height: 16px;
+  background: var(--border);
+  margin: 0 4px;
+}
+
