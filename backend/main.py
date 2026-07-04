@@ -205,13 +205,14 @@ Give a thorough, detailed answer. Use markdown formatting with headers and bulle
     yield f'data: {json.dumps({"sources": sources})}\n\n'
     full_response = ""
     try:
-      stream = ollama.chat(
+      client = ollama.AsyncClient()
+      async_stream = await client.chat(
         model=OLLAMA_MODEL,
         messages=ollama_messages,
         stream=True,
         options={"temperature":0.4, "num_predict":2048}  # longer answers
       )
-      for chunk in stream:
+      async for chunk in async_stream:
         token = chunk["message"]["content"]
         if token:
           full_response += token
@@ -282,10 +283,11 @@ MATERIAL:
   save_chats(chats)
 
   async def stream_summary():
-    s = ollama.chat(model=OLLAMA_MODEL, messages=[{"role":"user","content":prompt}],
+    client = ollama.AsyncClient()
+    s = await client.chat(model=OLLAMA_MODEL, messages=[{"role":"user","content":prompt}],
       stream=True, options={"temperature":0.3,"num_predict":2048})
     full_summary = ""
-    for chunk in s:
+    async for chunk in s:
       token = chunk["message"]["content"]
       if token:
         full_summary += token

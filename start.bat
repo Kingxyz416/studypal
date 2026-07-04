@@ -20,12 +20,12 @@ if errorlevel 1 (
 
 :: Start backend
 echo  [2/3] Starting backend...
-start /min "studypal-backend" cmd /k "cd /d "C:\Users\Mohd Huzaifa\Downloads\kingxyz\studypal\backend" && uvicorn main:app --port 8000"
+start /min "studypal-backend" cmd /k "cd /d "%~dp0backend" && uvicorn main:app --port 8000"
 timeout /t 4 /nobreak >NUL
 
 :: Start frontend
 echo  [3/3] Starting frontend...
-start /min "studypal-frontend" cmd /k "cd /d "C:\Users\Mohd Huzaifa\Downloads\kingxyz\studypal\frontend" && npm run dev"
+start /min "studypal-frontend" cmd /k "cd /d "%~dp0frontend" && npm run dev"
 timeout /t 5 /nobreak >NUL
 
 :: Open browser

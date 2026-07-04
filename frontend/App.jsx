@@ -122,6 +122,11 @@ export default function App() {
   const bottomRef  = useRef()
   const taRef      = useRef()
   const fileInputRef = useRef()
+  const notesRef = useRef([])
+
+  useEffect(() => {
+    notesRef.current = notes
+  }, [notes])
 
   // Derive active chat properties
   const activeChat = chats.find(c => c.id === activeChatId) || null
@@ -393,7 +398,7 @@ export default function App() {
     setNotes(prev => prev.map(n => n.id===id ? {...n, text} : n))
     clearTimeout(window._nt)
     window._nt = setTimeout(async () => {
-      const note = notes.find(n=>n.id===id)
+      const note = notesRef.current.find(n=>n.id===id)
       if (note) await fetch(`/api/stickies/${id}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({...note, text})})
     }, 800)
   }
