@@ -297,6 +297,16 @@ export default function App() {
                 }
                 return c
               }))
+            } else if (p.error) {
+              setChats(prev => prev.map(c => {
+                if (c.id === activeChatId) {
+                  return {
+                    ...c,
+                    messages: c.messages.map(m => m.id===aiId ? {...m, content:'Error: ' + p.error} : m)
+                  }
+                }
+                return c
+              }))
             }
           } catch {}
         }
